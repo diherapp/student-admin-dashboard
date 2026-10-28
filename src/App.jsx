@@ -10,6 +10,7 @@ import { auth, db, call, createStudent, firebaseConfigured, missingFirebaseConfi
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const errText = (e) => {
   const messages = {
+    'server-config/missing': 'Student creation is not configured on Vercel. Add FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT under Project Settings → Environment Variables, then redeploy.',
     'permission-denied': 'Firestore denied access to student records. Check that the Firestore rules are deployed and that you are signed in with the admin account.',
     'unauthenticated': 'Your sign-in has expired. Sign in again and retry.',
     'local-service/unavailable': 'The local Spark admin service is not running. Start it in a second terminal and try again.',
@@ -126,7 +127,12 @@ function Students() {
     <>
       <h2>Students</h2>
       {studentsError && <p className="err">{studentsError}</p>}
-      <p className="note">On Spark, keep the local admin service running in a second terminal to add students. Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.</p>
+      <p className="note">
+        {import.meta.env.DEV
+          ? 'On Spark, keep the local admin service running in a second terminal to add students.'
+          : 'To add students on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy.'}
+        {' '}Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.
+      </p>
       <form className="card row" onSubmit={add}>
         <input name="username" placeholder="Student username (login)" autoComplete="username" required />
         <input name="password" type="password" placeholder="Password (min 6)" minLength={6} required />

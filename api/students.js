@@ -9,7 +9,10 @@ function getAdminApp() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!projectId || !serviceAccountJson) {
-    throw new Error('Missing FIREBASE_PROJECT_ID or FIREBASE_SERVICE_ACCOUNT server environment variable.');
+    throw Object.assign(
+      new Error('Set FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings > Environment Variables, then redeploy.'),
+      { code: 'server-config/missing' },
+    );
   }
 
   let serviceAccount;
@@ -106,6 +109,10 @@ export default async function handler(request, response) {
 
     send(response, 201, { uid: student.uid, username: normalizedUsername });
   } catch (error) {
+    if (error.code === 'server-config/missing') {
+      send(response, 503, { code: error.code, message: error.message });
+      return;
+    }
     if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
       send(response, 401, { code: 'unauthenticated', message: 'Your sign-in expired. Sign in again.' });
       return;
