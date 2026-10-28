@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/students", "destination": "/" },
+    { "source": "/attendance", "destination": "/" },
+    { "source": "/tasks", "destination": "/" },
+    { "source": "/achievements", "destination": "/" }
+  ]
+}

@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn()  { return request.auth != null; }
+    function isAdmin()   { return signedIn() && request.auth.token.admin == true; }
+    function isOwner(u)  { return signedIn() && request.auth.uid == u; }
+
+    match /students/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();                       // students cannot edit their profile
+
+      match /attendance/{day} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if isAdmin();                     // only admin marks attendance
+      }
+      match /taskStatus/{taskId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if isOwner(uid) || isAdmin();     // student ticks tasks done
+      }
+      match /achievements/{id} {
+        allow read, delete: if isOwner(uid) || isAdmin();
+        allow create, update: if (isOwner(uid) || isAdmin())
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 150
+          && request.resource.data.summary.size() <= 500;
+      }
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid in resource.data.assignedTo);
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /achievements/{uid}/{file} {
+      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.admin == true);
+      allow write: if request.auth != null && request.auth.uid == uid
+                   && request.resource.contentType == 'application/pdf'
+                   && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if request.auth != null && (request.auth.uid == uid || request.auth.token.admin == true);
+    }
+  }
+}
