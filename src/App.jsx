@@ -116,6 +116,27 @@ function Students() {
   const { students, error: studentsError } = useStudents();
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState('');
+  const [creationConfig, setCreationConfig] = useState(import.meta.env.DEV ? 'local' : 'checking');
+  useEffect(() => {
+    if (import.meta.env.DEV) return undefined;
+
+    let active = true;
+    fetch('/api/students')
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Setup check failed with HTTP ${response.status}.`);
+        const result = await response.json();
+        if (typeof result.configured !== 'boolean') {
+          throw new Error('Setup check returned an invalid response.');
+        }
+        if (active) setCreationConfig(result.configured ? 'ready' : 'missing');
+      })
+      .catch((error) => {
+        console.error('Could not check student-creation configuration:', error);
+        if (active) setCreationConfig('unavailable');
+      });
+
+    return () => { active = false; };
+  }, []);
   const run = async (fn) => { setMsg(''); try { await fn(); setMsg('Done.'); } catch (e) { setMsg(errText(e)); } };
   const add = (e) => {
     e.preventDefault();
@@ -128,10 +149,10 @@ function Students() {
       <h2>Students</h2>
       {studentsError && <p className="err">{studentsError}</p>}
       <p className="note">
-        {import.meta.env.DEV
-          ? 'On Spark, keep the local admin service running in a second terminal to add students.'
-          : 'To add students on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy.'}
-        {' '}Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.
+        {creationConfig === 'local' && 'On Spark, keep the local admin service running in a second terminal to add students. '}
+        {creationConfig === 'missing' && 'To add students on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy. '}
+        {creationConfig === 'unavailable' && 'Could not check whether student creation is configured. If adding students fails, check the Vercel Function logs. '}
+        Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.
       </p>
       <form className="card row" onSubmit={add}>
         <input name="username" placeholder="Student username (login)" autoComplete="username" required />

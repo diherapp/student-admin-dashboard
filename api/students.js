@@ -33,10 +33,31 @@ function send(response, status, body) {
   response.status(status).json(body);
 }
 
+function hasAdminConfiguration() {
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (!projectId || !serviceAccountJson) return false;
+
+  try {
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    return serviceAccount.type === 'service_account'
+      && serviceAccount.project_id === projectId
+      && typeof serviceAccount.client_email === 'string'
+      && typeof serviceAccount.private_key === 'string';
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(request, response) {
+  if (request.method === 'GET') {
+    send(response, 200, { configured: hasAdminConfiguration() });
+    return;
+  }
+
   if (request.method !== 'POST') {
-    response.setHeader('Allow', 'POST');
-    send(response, 405, { code: 'method-not-allowed', message: 'Use POST to create a student.' });
+    response.setHeader('Allow', 'GET, POST');
+    send(response, 405, { code: 'method-not-allowed', message: 'Use GET to check setup or POST to create a student.' });
     return;
   }
 
