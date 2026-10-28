@@ -58,10 +58,10 @@ export default async function handler(request, response) {
       return;
     }
 
-    const { studentId, password, name, rollNo = '', department = '', year = '' } = request.body || {};
+    const { username, password, name, rollNo = '', department = '', year = '' } = request.body || {};
     if (
-      typeof studentId !== 'string' ||
-      !/^[a-zA-Z0-9._-]{1,64}$/.test(studentId.trim()) ||
+      typeof username !== 'string' ||
+      !/^[a-zA-Z0-9._-]{1,64}$/.test(username.trim()) ||
       typeof password !== 'string' ||
       password.length < 6 ||
       typeof name !== 'string' ||
@@ -73,8 +73,8 @@ export default async function handler(request, response) {
     }
 
     const projectId = process.env.FIREBASE_PROJECT_ID;
-    const username = studentId.trim().toLowerCase();
-    const email = `${username}@${projectId}.firebaseapp.com`;
+    const normalizedUsername = username.trim().toLowerCase();
+    const email = `${normalizedUsername}@${projectId}.firebaseapp.com`;
     let student;
     try {
       student = await adminAuth.createUser({ email, password, displayName: name.trim() });
@@ -88,7 +88,7 @@ export default async function handler(request, response) {
 
     try {
       await getFirestore(app).doc(`students/${student.uid}`).set({
-        username,
+        username: normalizedUsername,
         name: name.trim(),
         rollNo: rollNo.trim(),
         email,
@@ -104,7 +104,7 @@ export default async function handler(request, response) {
       throw error;
     }
 
-    send(response, 201, { uid: student.uid, username });
+    send(response, 201, { uid: student.uid, username: normalizedUsername });
   } catch (error) {
     if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
       send(response, 401, { code: 'unauthenticated', message: 'Your sign-in expired. Sign in again.' });

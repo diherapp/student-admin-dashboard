@@ -5,6 +5,7 @@ body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--fg
 .center{min-height:100vh;display:grid;place-items:center;padding:16px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:12px 0}
 .login{width:min(360px,100%);display:grid;gap:12px}.login h1{margin:0;font-size:20px}
+.setup{width:min(680px,100%);line-height:1.55}.setup h1{margin-top:0}.setup h2{font-size:16px;margin:20px 0 8px}.setup li{margin:6px 0}.setup code{overflow-wrap:anywhere}
 input,select,textarea,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
 textarea{width:100%;margin:10px 0}
 button{cursor:pointer}button:hover{border-color:var(--pri)}

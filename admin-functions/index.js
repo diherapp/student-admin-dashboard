@@ -1,6 +1,6 @@
 // Deploy:  cd admin-functions && npm i firebase-admin firebase-functions && firebase deploy --only functions
 // Call from your ADMIN WEBSITE (signed in as an admin user) with the Firebase JS SDK:
-//   httpsCallable(functions, 'createStudent')({ studentId, password, name, rollNo, department, year })
+//   httpsCallable(functions, 'createStudent')({ username, password, name, rollNo, department, year })
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const { initializeApp } = require('firebase-admin/app');
@@ -14,17 +14,17 @@ function requireAdmin(req) {
 
 exports.createStudent = onCall(async (req) => {
   requireAdmin(req);
-  const { studentId, password, name, rollNo = '', department = '', year = '' } = req.data || {};
+  const { username, password, name, rollNo = '', department = '', year = '' } = req.data || {};
   if (
-    typeof studentId !== 'string' ||
-    !/^[a-zA-Z0-9._-]{1,64}$/.test(studentId.trim()) ||
+    typeof username !== 'string' ||
+    !/^[a-zA-Z0-9._-]{1,64}$/.test(username.trim()) ||
     typeof password !== 'string' ||
     password.length < 6 ||
     typeof name !== 'string' ||
     !name.trim() ||
     ![rollNo, department, year].every((value) => typeof value === 'string')
   ) {
-    throw new HttpsError('invalid-argument', 'Enter a valid student ID, password, and name.');
+    throw new HttpsError('invalid-argument', 'Enter a valid student username, password, and name.');
   }
 
   const projectId = process.env.GCLOUD_PROJECT;
@@ -32,8 +32,8 @@ exports.createStudent = onCall(async (req) => {
     throw new HttpsError('failed-precondition', 'The Firebase project ID is not configured.');
   }
 
-  const normalizedStudentId = studentId.trim().toLowerCase();
-  const email = `${normalizedStudentId}@${projectId}.firebaseapp.com`;
+  const normalizedUsername = username.trim().toLowerCase();
+  const email = `${normalizedUsername}@${projectId}.firebaseapp.com`;
   let user;
   try {
     user = await getAuth().createUser({
@@ -43,7 +43,7 @@ exports.createStudent = onCall(async (req) => {
     });
   } catch (error) {
     if (error.code === 'auth/email-already-exists') {
-      throw new HttpsError('already-exists', 'That student ID is already in use.');
+      throw new HttpsError('already-exists', 'That student username is already in use.');
     }
     logger.error('Failed to create student authentication account.', error);
     throw new HttpsError('internal', 'Could not create the student account.');
@@ -51,6 +51,7 @@ exports.createStudent = onCall(async (req) => {
 
   try {
     await getFirestore().doc(`students/${user.uid}`).set({
+      username: normalizedUsername,
       name: name.trim(),
       rollNo: rollNo.trim(),
       email,

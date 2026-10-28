@@ -23,25 +23,32 @@ const requiredConfigKeys = [
   'messagingSenderId',
   'appId',
 ];
-const missingConfigKeys = requiredConfigKeys.filter((key) => !firebaseConfig[key]);
+const toEnvironmentVariable = (key) =>
+  `VITE_FIREBASE_${key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`;
 
-if (missingConfigKeys.length > 0) {
-  throw new Error(
-    `Missing Firebase configuration: ${missingConfigKeys
-      .map((key) => `VITE_FIREBASE_${key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`)
-      .join(', ')}`,
-  );
-}
+export const missingFirebaseConfig = requiredConfigKeys
+  .filter((key) => !firebaseConfig[key]?.trim())
+  .map(toEnvironmentVariable);
+export const firebaseConfigured = missingFirebaseConfig.length === 0;
 
-const app = initializeApp(firebaseConfig);
+const app = firebaseConfigured ? initializeApp(firebaseConfig) : null;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const analytics = isSupported().then((supported) => (supported ? getAnalytics(app) : null));
-const fns = getFunctions(app); // default region us-central1
-export const call = (name, data) => httpsCallable(fns, name)(data).then((r) => r.data);
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+export const analytics = app
+  ? isSupported().then((supported) => (supported ? getAnalytics(app) : null))
+  : Promise.resolve(null);
+const fns = app ? getFunctions(app) : null; // default region us-central1
+export const call = (name, data) => {
+  if (!fns) throw new Error('Firebase is not configured.');
+  return httpsCallable(fns, name)(data).then((r) => r.data);
+};
 
 export async function createStudent(data) {
+  if (!auth) {
+    throw Object.assign(new Error('Firebase is not configured.'), { code: 'firebase/not-configured' });
+  }
+
   const user = auth.currentUser;
   if (!user) {
     throw Object.assign(new Error('Sign in as an admin to add students.'), { code: 'unauthenticated' });

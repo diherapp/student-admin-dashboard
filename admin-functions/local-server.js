@@ -80,10 +80,10 @@ const server = http.createServer(async (request, response) => {
     }
 
     const body = await readBody(request);
-    const { studentId, password, name, rollNo = '', department = '', year = '' } = body || {};
+    const { username, password, name, rollNo = '', department = '', year = '' } = body || {};
     if (
-      typeof studentId !== 'string' ||
-      !/^[a-zA-Z0-9._-]{1,64}$/.test(studentId.trim()) ||
+      typeof username !== 'string' ||
+      !/^[a-zA-Z0-9._-]{1,64}$/.test(username.trim()) ||
       typeof password !== 'string' ||
       password.length < 6 ||
       typeof name !== 'string' ||
@@ -94,8 +94,8 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    const username = studentId.trim().toLowerCase();
-    const email = `${username}@${projectId}.firebaseapp.com`;
+    const normalizedUsername = username.trim().toLowerCase();
+    const email = `${normalizedUsername}@${projectId}.firebaseapp.com`;
     let student;
     try {
       student = await auth.createUser({ email, password, displayName: name.trim() });
@@ -109,7 +109,7 @@ const server = http.createServer(async (request, response) => {
 
     try {
       await db.doc(`students/${student.uid}`).set({
-        username,
+        username: normalizedUsername,
         name: name.trim(),
         rollNo: rollNo.trim(),
         email,
@@ -125,7 +125,7 @@ const server = http.createServer(async (request, response) => {
       throw error;
     }
 
-    respond(response, 201, { uid: student.uid, username }, origin);
+    respond(response, 201, { uid: student.uid, username: normalizedUsername }, origin);
   } catch (error) {
     if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
       respond(response, 401, { code: 'unauthenticated', message: 'Your sign-in expired. Sign in again.' }, origin);

@@ -9,12 +9,14 @@ Admin-only website: Dashboard, Students, Attendance, Tasks, Achievements.
 4. Create the admin login once: in `admin-functions/`, set `GOOGLE_APPLICATION_CREDENTIALS` to a private service-account JSON file, then run `node --env-file=../.env.local .\make-admin.js` (Node.js 20.6+).
 5. To add students locally while staying on Spark, open a second terminal in `admin-functions/`, set `GOOGLE_APPLICATION_CREDENTIALS` to the private key, and run `node --env-file=../.env.local .\local-server.js`. Keep this service running while using the local website. Students sign in with username and password; Firebase Auth uses `<username>@<project-id>.firebaseapp.com` internally.
 
+Student creation stores the normalized login name in the Firestore student profile's `username` field. The password is sent to Firebase Authentication to create the account; it is not stored in the Firestore profile.
+
 ## 2. Run locally
-Copy `.env.example` to `.env.local` and fill in the Firebase values before running the website:
+Copy `.env.example` to `.env.local` and fill in the six required Firebase web config values before running the website. Find them in Firebase Console > Project settings > General > Your apps > Firebase SDK configuration. Without them, the site displays a setup guide; authentication and student data require a Firebase project:
 `npm install && npm run dev`
 
 ## 3. Deploy on Vercel
-Push to GitHub > Vercel: New Project > import (framework: Vite, no root directory needed) > add the six required `VITE_FIREBASE_*` environment variables from `.env.example`; `VITE_FIREBASE_DATABASE_URL` and `VITE_FIREBASE_MEASUREMENT_ID` are optional > Deploy. To enable Add Student for visitors, add these **server-only** Vercel environment variables under Project Settings > Environment Variables:
+Push to GitHub > Vercel: New Project > import (framework: Vite, no root directory needed) > add the six required `VITE_FIREBASE_*` environment variables from `.env.example`; `VITE_FIREBASE_DATABASE_URL` and `VITE_FIREBASE_MEASUREMENT_ID` are optional > Deploy. If the site shows a Firebase setup guide, add the missing variables under Project Settings > Environment Variables for the Production (and Preview, if needed) environment, then redeploy. Vite embeds these values at build time. To enable Add Student for visitors, add these **server-only** Vercel environment variables under Project Settings > Environment Variables:
 
 - `FIREBASE_PROJECT_ID`: your Firebase project ID.
 - `FIREBASE_SERVICE_ACCOUNT`: the full contents of a service-account JSON key with permission to manage Firebase Authentication users and Firestore.

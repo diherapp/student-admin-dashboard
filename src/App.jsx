@@ -5,7 +5,7 @@ import {
   collection, onSnapshot, getDoc, getDocs, doc, addDoc, deleteDoc, setDoc,
   writeBatch, query, orderBy, where, Timestamp, serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db, call, createStudent } from './firebase';
+import { auth, db, call, createStudent, firebaseConfigured, missingFirebaseConfig } from './firebase';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const errText = (e) => {
@@ -16,7 +16,7 @@ const errText = (e) => {
     'invalid-argument': 'Enter a valid student username, password, and name.',
     'already-exists': 'That student username is already in use.',
     'permission-denied-api': 'Only an admin account can add students.',
-    'functions/already-exists': 'That student ID is already in use.',
+    'functions/already-exists': 'That student username is already in use.',
     'functions/failed-precondition': 'Firebase is missing the project configuration required to create student accounts.',
     'functions/internal': 'The server could not add this student. Check Firebase Functions logs for createStudent to see the underlying error.',
     'functions/not-found': 'The createStudent Firebase Function is not deployed. Deploy the latest Firebase Functions and try again.',
@@ -126,9 +126,9 @@ function Students() {
     <>
       <h2>Students</h2>
       {studentsError && <p className="err">{studentsError}</p>}
-      <p className="note">On Spark, keep the local admin service running in a second terminal to add students. Students sign in with their username; no email inbox is needed.</p>
+      <p className="note">On Spark, keep the local admin service running in a second terminal to add students. Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.</p>
       <form className="card row" onSubmit={add}>
-        <input name="studentId" placeholder="Student ID (login)" required />
+        <input name="username" placeholder="Student username (login)" autoComplete="username" required />
         <input name="password" type="password" placeholder="Password (min 6)" minLength={6} required />
         <input name="name" placeholder="Full name" required />
         <input name="rollNo" placeholder="Roll no" />
@@ -405,7 +405,38 @@ function StudentPortal({ user }) {
   );
 }
 
-export default function App() {
+function FirebaseSetup() {
+  return (
+    <div className="center">
+      <section className="card setup">
+        <h1>StudentPortal setup required</h1>
+        <p>
+          This deployment is missing its Firebase web configuration. Add the variables below
+          in your Vercel project to enable sign-in and load student data.
+        </p>
+        <h2>Missing environment variables</h2>
+        <ul>{missingFirebaseConfig.map((name) => <li key={name}><code>{name}</code></li>)}</ul>
+        <ol>
+          <li>In Vercel, open this project and go to <b>Settings → Environment Variables</b>.</li>
+          <li>
+            Get each value from <b>Firebase Console → Project settings → General → Your apps</b>,
+            under your web app&apos;s Firebase SDK configuration.
+          </li>
+          <li>
+            Add the variables for Production (and Preview if needed), save, then redeploy.
+            Vite reads these values when it builds the site.
+          </li>
+        </ol>
+        <p className="note">
+          You also need a Firebase project with Email/Password Authentication and Firestore enabled.
+          The web config is not an admin key; never put a service-account key in a <code>VITE_</code> variable.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function ConfiguredApp() {
   const [user, setUser] = useState(undefined);
   const [admin, setAdmin] = useState(false);
   useEffect(() => onAuthStateChanged(auth, async (u) => {
@@ -437,4 +468,8 @@ export default function App() {
       </div>
     </BrowserRouter>
   );
+}
+
+export default function App() {
+  return firebaseConfigured ? <ConfiguredApp /> : <FirebaseSetup />;
 }
