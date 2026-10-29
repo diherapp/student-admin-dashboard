@@ -87,8 +87,7 @@ function Login() {
       <form className="login-card" onSubmit={submit}>
         <div className="login-brand">
           <div className="login-mark"><Icon name="shield" size={54} /></div>
-          <h1>S2C Admin Dashboard</h1>
-          <p>Student Administration System</p>
+          <h1>HRMS Admin Dashboard</h1>
         </div>
         <label className="login-field">
           <span>Username</span>
@@ -544,7 +543,7 @@ function ConfiguredApp() {
     <BrowserRouter>
       <div className="admin-shell">
         <aside className="sidebar">
-          <div className="brand"><span className="brand-mark"><Icon name="shield" size={20} /></span><strong>S2C Admin</strong></div>
+          <div className="brand"><span className="brand-mark"><Icon name="shield" size={20} /></span><strong>HRMS Admin Dashboard</strong></div>
           <nav className="side-nav">
             {adminLinks.map(([to, label, icon]) => (
               <NavLink key={to} to={to} end={to === '/'}><Icon name={icon} size={19} /><span>{label}</span></NavLink>))}
@@ -557,7 +556,7 @@ function ConfiguredApp() {
         </aside>
         <div className="app-frame">
           <header className="topbar">
-            <span>Student Management System</span>
+            <span>HRMS Admin Dashboard</span>
             <div className="topbar-actions"><span><Icon name="calendar" size={15} />{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span><button onClick={() => signOut(auth)}><Icon name="logout" size={16} /> Logout</button></div>
           </header>
           <main className="admin-main">
