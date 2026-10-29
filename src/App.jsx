@@ -172,8 +172,6 @@ function Students() {
             <td>{s.rollNo}</td><td>{s.name}</td><td>{s.department}</td><td>{s.year}</td><td>{s.username || s.email?.split('@')[0]}</td>
             <td className="acts">
               <button onClick={() => { const p = prompt('New password (min 6):'); if (p) run(() => call('resetStudentPassword', { uid: s.id, newPassword: p })); }}>Reset pw</button>
-              <button onClick={() => run(() => call('setStudentDisabled', { uid: s.id, disabled: true }))}>Disable</button>
-              <button onClick={() => run(() => call('setStudentDisabled', { uid: s.id, disabled: false }))}>Enable</button>
               <button className="danger" onClick={() => confirm(`Delete ${s.name} and all their data?`) && run(() => call('deleteStudent', { uid: s.id }))}>Delete</button>
             </td>
           </tr>))}
