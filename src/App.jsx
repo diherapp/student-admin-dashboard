@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import {
   collection, onSnapshot, getDoc, getDocs, doc, addDoc, deleteDoc, setDoc,
@@ -8,6 +8,23 @@ import {
 import { auth, db, call, createStudent, firebaseConfigured, missingFirebaseConfig } from './firebase';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const iconPaths = {
+  shield: <><path d="M12 3 19 6v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" /><path d="m9 12 2 2 4-4" /></>,
+  user: <><circle cx="12" cy="8" r="3" /><path d="M5 20a7 7 0 0 1 14 0" /></>,
+  lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 1 1 8 0v3" /></>,
+  dashboard: <><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="3" width="8" height="5" rx="1" /><rect x="13" y="10" width="8" height="11" rx="1" /><rect x="3" y="13" width="8" height="8" rx="1" /></>,
+  students: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1H3Z" /><path d="M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1h-3" /></>,
+  attendance: <><rect x="4" y="5" width="16" height="16" rx="2" /><path d="M8 3v4m8-4v4M4 10h16m-11 5 2 2 4-4" /></>,
+  tasks: <><path d="M8 4h11a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2" /><path d="m8 12 2 2 4-4M8 7h7" /></>,
+  achievements: <><path d="M12 3 14.8 9l6.2.8-4.5 4.3 1.1 6.1L12 17.3l-5.6 2.9 1.1-6.1L3 9.8 9.2 9 12 3Z" /></>,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18" /></>,
+  logout: <><path d="M10 17l5-5-5-5m5 5H3" /><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></>,
+  arrow: <><path d="M5 12h14m-6-6 6 6-6 6" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+};
+function Icon({ name, size = 20 }) {
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{iconPaths[name]}</svg>;
+}
 const errText = (e) => {
   const messages = {
     'server-config/missing': 'Student creation is not configured on Vercel. Add FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT under Project Settings → Environment Variables, then redeploy.',
@@ -66,20 +83,30 @@ function Login() {
     }
   };
   return (
-    <div className="center">
-      <form className="card login" onSubmit={submit}>
-        <h1>StudentPortal</h1>
-        <p className="note">Sign in with your username and password.</p>
-        <input name="username" type="text" placeholder="Username" autoComplete="username" required />
-        <input name="password" type="password" placeholder="Password" required />
+    <div className="login-page">
+      <form className="login-card" onSubmit={submit}>
+        <div className="login-brand">
+          <div className="login-mark"><Icon name="shield" size={54} /></div>
+          <h1>S2C Admin Dashboard</h1>
+          <p>Student Administration System</p>
+        </div>
+        <label className="login-field">
+          <span>Username</span>
+          <span className="input-icon"><Icon name="user" size={17} /><input name="username" type="text" autoComplete="username" required autoFocus /></span>
+        </label>
+        <label className="login-field">
+          <span>Password</span>
+          <span className="input-icon"><Icon name="lock" size={17} /><input name="password" type="password" autoComplete="current-password" required /></span>
+        </label>
         {err && <p className="err">{err}</p>}
-        <button disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        <button className="login-submit" disabled={busy}>{busy ? 'Signing in…' : <><Icon name="logout" size={15} /> Login</>}</button>
       </form>
     </div>
   );
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
   const { students, error: studentsError } = useStudents();
   const [tasks, setTasks] = useState(0);
   const [att, setAtt] = useState({ present: 0, absent: 0, late: 0 });
@@ -95,20 +122,43 @@ function Dashboard() {
     })();
   }, [students]);
   const marked = att.present + att.absent + att.late;
-  const Stat = ({ n, l }) => <div className="card stat"><b>{n}</b><span>{l}</span></div>;
+  const Stat = ({ n, l, detail, icon, tone, link, action }) => (
+    <section className="overview-card">
+      <div className={`overview-icon ${tone}`}><Icon name={icon} /></div>
+      <span className="eyebrow">{l}</span>
+      <strong className={tone}>{n}</strong>
+      <span className="stat-detail">{detail}</span>
+      <button className="text-action" onClick={() => navigate(link)}>{action}<Icon name="arrow" size={16} /></button>
+    </section>
+  );
   return (
-    <>
-      <h2>Dashboard</h2>
+    <div className="dashboard-page">
       {studentsError && <p className="err">{studentsError}</p>}
-      <div className="grid">
-        <Stat n={students.length} l="Students" />
-        <Stat n={tasks} l="Tasks" />
-        <Stat n={att.present} l="Present today" />
-        <Stat n={att.absent} l="Absent today" />
-        <Stat n={att.late} l="Late today" />
-        <Stat n={Math.max(students.length - marked, 0)} l="Not marked today" />
+      <div className="page-heading">
+        <div><h2>Administrative Overview</h2><p>Student attendance, tasks, and academic records</p></div>
+        <button className="primary-action" onClick={() => navigate('/attendance')}><Icon name="attendance" size={17} /> Today&apos;s Attendance</button>
       </div>
-    </>
+      <div className="overview-grid">
+        <Stat n={students.length} l="Total Students" detail="Registered students" icon="students" tone="blue" link="/students" action="View student directory" />
+        <Stat n={tasks} l="Active Tasks" detail="Assigned learning tasks" icon="clock" tone="green" link="/tasks" action="Manage tasks" />
+        <Stat n={att.present} l="Today&apos;s Attendance" detail={`Visits recorded today: ${marked}`} icon="attendance" tone="cyan" link="/attendance" action="Review attendance" />
+        <Stat n={Math.max(students.length - marked, 0)} l="Not Marked Today" detail={`${att.absent} absent · ${att.late} late`} icon="achievements" tone="amber" link="/attendance" action="Review daily records" />
+      </div>
+      <div className="dashboard-panels">
+        <section className="panel">
+          <header><span><Icon name="tasks" /> Task Management</span><NavLink to="/tasks">View all</NavLink></header>
+          <div className="panel-body"><span className="eyebrow">TOTAL ASSIGNED TASKS</span><strong>{tasks}</strong><p>Track assignments and student progress</p><button className="outline-action" onClick={() => navigate('/tasks')}>Manage tasks <Icon name="arrow" size={16} /></button></div>
+        </section>
+        <section className="panel">
+          <header><span><Icon name="attendance" /> Attendance</span><NavLink to="/attendance">View all</NavLink></header>
+          <div className="panel-body"><span className="eyebrow">STUDENTS MARKED TODAY</span><strong>{marked}<small> / {students.length}</small></strong><p>{att.present} present · {att.absent} absent · {att.late} late</p><button className="outline-action" onClick={() => navigate('/attendance')}>Review attendance <Icon name="arrow" size={16} /></button></div>
+        </section>
+        <section className="panel">
+          <header><span><Icon name="achievements" /> Student Records</span><NavLink to="/achievements">View all</NavLink></header>
+          <div className="panel-body"><span className="eyebrow">STUDENT ACHIEVEMENTS</span><strong><Icon name="students" size={25} /></strong><p>Review accomplishments and student profiles</p><button className="outline-action" onClick={() => navigate('/achievements')}>View achievements <Icon name="arrow" size={16} /></button></div>
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -394,11 +444,11 @@ function StudentPortal({ user }) {
   }
 
   return (
-    <div className="shell">
-      <nav>
+    <div className="user-shell">
+      <nav className="user-topbar">
         <h1>StudentPortal</h1>
         <span>{student?.name || 'Loading profile…'}</span>
-        <button onClick={() => signOut(auth)}>Sign out</button>
+        <button onClick={() => signOut(auth)}><Icon name="logout" size={16} /> Sign out</button>
       </nav>
       <main>
         <h2>Welcome, {student?.name || 'student'}</h2>
@@ -471,25 +521,44 @@ function ConfiguredApp() {
   if (user === undefined) return <p className="center">Loading…</p>;
   if (!user) return <Login />;
   if (!admin) return <StudentPortal user={user} />;
+  const adminLinks = [
+    ['/', 'Dashboard', 'dashboard'],
+    ['/students', 'Students', 'students'],
+    ['/attendance', 'Attendance', 'attendance'],
+    ['/tasks', 'Tasks', 'tasks'],
+    ['/achievements', 'Achievements', 'achievements'],
+  ];
   return (
     <BrowserRouter>
-      <div className="shell">
-        <nav>
-          <h1>Admin</h1>
-          {[['/', 'Dashboard'], ['/students', 'Students'], ['/attendance', 'Attendance'], ['/tasks', 'Tasks'], ['/achievements', 'Achievements']].map(([to, l]) => (
-            <NavLink key={to} to={to} end={to === '/'}>{l}</NavLink>))}
-          <button onClick={() => signOut(auth)}>Sign out</button>
-        </nav>
-        <main>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/students" element={<Students />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </main>
+      <div className="admin-shell">
+        <aside className="sidebar">
+          <div className="brand"><span className="brand-mark"><Icon name="shield" size={20} /></span><strong>S2C Admin</strong></div>
+          <nav className="side-nav">
+            {adminLinks.map(([to, label, icon]) => (
+              <NavLink key={to} to={to} end={to === '/'}><Icon name={icon} size={19} /><span>{label}</span></NavLink>))}
+          </nav>
+          <div className="sidebar-account">
+            <span className="avatar">{(auth.currentUser?.email?.[0] || 'A').toUpperCase()}</span>
+            <span className="account-name"><strong>{auth.currentUser?.email?.split('@')[0] || 'admin'}</strong><small>Administrator</small></span>
+            <button className="sidebar-logout" aria-label="Logout" onClick={() => signOut(auth)}><Icon name="logout" size={17} /></button>
+          </div>
+        </aside>
+        <div className="app-frame">
+          <header className="topbar">
+            <span>Student Management System</span>
+            <div className="topbar-actions"><span><Icon name="calendar" size={15} />{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span><button onClick={() => signOut(auth)}><Icon name="logout" size={16} /> Logout</button></div>
+          </header>
+          <main className="admin-main">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/students" element={<Students />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </BrowserRouter>
   );
