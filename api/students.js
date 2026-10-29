@@ -57,7 +57,7 @@ export default async function handler(request, response) {
 
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'GET, POST');
-    send(response, 405, { code: 'method-not-allowed', message: 'Use GET to check setup or POST to create a student.' });
+    send(response, 405, { code: 'method-not-allowed', message: 'Use GET to check setup or POST to manage student accounts.' });
     return;
   }
 
@@ -78,7 +78,55 @@ export default async function handler(request, response) {
     const adminAuth = getAuth(app);
     const decodedToken = await adminAuth.verifyIdToken(token, true);
     if (decodedToken.admin !== true) {
-      send(response, 403, { code: 'permission-denied-api', message: 'Only admins can add students.' });
+      send(response, 403, { code: 'permission-denied-api', message: 'Only admins can manage student records.' });
+      return;
+    }
+
+    const { action, uid, newPassword } = request.body || {};
+    if (action === 'resetStudentPassword') {
+      if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128 ||
+        typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 4096) {
+        send(response, 400, { code: 'invalid-argument', message: 'Enter a student ID and a password of at least 6 characters.' });
+        return;
+      }
+      try {
+        await adminAuth.updateUser(uid, { password: newPassword });
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          send(response, 404, { code: 'not-found', message: 'The student account no longer exists.' });
+          return;
+        }
+        console.error('Failed to reset student password:', error);
+        send(response, 500, { code: 'internal', message: 'Could not reset the student password. Check the Vercel Function logs.' });
+        return;
+      }
+      send(response, 200, { ok: true });
+      return;
+    }
+
+    if (action === 'deleteStudent') {
+      if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128) {
+        send(response, 400, { code: 'invalid-argument', message: 'A valid student ID is required.' });
+        return;
+      }
+      try {
+        try {
+          await adminAuth.deleteUser(uid);
+        } catch (error) {
+          if (error.code !== 'auth/user-not-found') throw error;
+        }
+        await getFirestore(app).recursiveDelete(getFirestore(app).doc(`students/${uid}`));
+      } catch (error) {
+        console.error('Failed to delete student:', error);
+        send(response, 500, { code: 'internal', message: 'Could not completely delete the student. Retry the delete and check the Vercel Function logs.' });
+        return;
+      }
+      send(response, 200, { ok: true });
+      return;
+    }
+
+    if (action) {
+      send(response, 400, { code: 'invalid-argument', message: 'Unsupported student action.' });
       return;
     }
 
@@ -138,7 +186,7 @@ export default async function handler(request, response) {
       send(response, 401, { code: 'unauthenticated', message: 'Your sign-in expired. Sign in again.' });
       return;
     }
-    console.error('Failed to create student through the Vercel API:', error);
+    console.error('Failed to process student request through the Vercel API:', error);
     send(response, 500, {
       code: 'internal',
       message: 'Could not add the student. Check the Vercel function logs for the server error.',

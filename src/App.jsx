@@ -5,7 +5,7 @@ import {
   collection, onSnapshot, getDoc, getDocs, doc, addDoc, deleteDoc, setDoc,
   writeBatch, query, orderBy, where, Timestamp, serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db, call, createStudent, firebaseConfigured, missingFirebaseConfig } from './firebase';
+import { auth, db, createStudent, manageStudent, firebaseConfigured, missingFirebaseConfig } from './firebase';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const iconPaths = {
@@ -31,9 +31,9 @@ const errText = (e) => {
     'permission-denied': 'Firestore denied access to student records. Check that the Firestore rules are deployed and that you are signed in with the admin account.',
     'unauthenticated': 'Your sign-in has expired. Sign in again and retry.',
     'local-service/unavailable': 'The local Spark admin service is not running. Start it in a second terminal and try again.',
-    'invalid-argument': 'Enter a valid student username, password, and name.',
     'already-exists': 'That student username is already in use.',
-    'permission-denied-api': 'Only an admin account can add students.',
+    'permission-denied-api': 'Only an admin account can manage student records.',
+    'not-found': 'The student account no longer exists.',
     'functions/already-exists': 'That student username is already in use.',
     'functions/failed-precondition': 'Firebase is missing the project configuration required to create student accounts.',
     'functions/internal': 'The server could not add this student. Check Firebase Functions logs for createStudent to see the underlying error.',
@@ -166,6 +166,7 @@ function Students() {
   const { students, error: studentsError } = useStudents();
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState('');
+  const [msgError, setMsgError] = useState(false);
   const [creationConfig, setCreationConfig] = useState(import.meta.env.DEV ? 'local' : 'checking');
   useEffect(() => {
     if (import.meta.env.DEV) return undefined;
@@ -187,7 +188,17 @@ function Students() {
 
     return () => { active = false; };
   }, []);
-  const run = async (fn) => { setMsg(''); try { await fn(); setMsg('Done.'); } catch (e) { setMsg(errText(e)); } };
+  const run = async (fn) => {
+    setMsg('');
+    setMsgError(false);
+    try {
+      await fn();
+      setMsg('Done.');
+    } catch (e) {
+      setMsg(errText(e));
+      setMsgError(true);
+    }
+  };
   const add = (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
@@ -198,12 +209,13 @@ function Students() {
     <>
       <h2>Students</h2>
       {studentsError && <p className="err">{studentsError}</p>}
-      <p className="note">
-        {creationConfig === 'local' && 'On Spark, keep the local admin service running in a second terminal to add students. '}
-        {creationConfig === 'missing' && 'To add students on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy. '}
-        {creationConfig === 'unavailable' && 'Could not check whether student creation is configured. If adding students fails, check the Vercel Function logs. '}
-        Students sign in with their username; no email inbox is needed. The username is saved in the student profile. The password is managed by Firebase Authentication and is not saved in Firestore.
-      </p>
+      {(creationConfig === 'local' || creationConfig === 'missing' || creationConfig === 'unavailable') && (
+        <p className="note">
+          {creationConfig === 'local' && 'On Spark, keep the local admin service running in a second terminal to add or manage student accounts. '}
+          {creationConfig === 'missing' && 'To add or manage student accounts on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy. '}
+          {creationConfig === 'unavailable' && 'Could not check whether student account management is configured. If an action fails, check the Vercel Function logs. '}
+        </p>
+      )}
       <form className="card row" onSubmit={add}>
         <input name="username" placeholder="Student username (login)" autoComplete="username" required />
         <input name="password" type="password" placeholder="Password (min 6)" minLength={6} required />
@@ -213,7 +225,7 @@ function Students() {
         <input name="year" placeholder="Year" />
         <button>Add student</button>
       </form>
-      {msg && <p className="note">{msg}</p>}
+      {msg && <p className={msgError ? 'err' : 'note'}>{msg}</p>}
       <input className="search" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="scroll"><table>
         <thead><tr><th>Roll</th><th>Name</th><th>Dept</th><th>Year</th><th>Login username</th><th></th></tr></thead>
@@ -221,8 +233,8 @@ function Students() {
           <tr key={s.id}>
             <td>{s.rollNo}</td><td>{s.name}</td><td>{s.department}</td><td>{s.year}</td><td>{s.username || s.email?.split('@')[0]}</td>
             <td className="acts">
-              <button onClick={() => { const p = prompt('New password (min 6):'); if (p) run(() => call('resetStudentPassword', { uid: s.id, newPassword: p })); }}>Reset pw</button>
-              <button className="danger" onClick={() => confirm(`Delete ${s.name} and all their data?`) && run(() => call('deleteStudent', { uid: s.id }))}>Delete</button>
+              <button onClick={() => { const password = prompt('New password (min 6):'); if (password) run(() => manageStudent('resetStudentPassword', { uid: s.id, newPassword: password })); }}>Reset pw</button>
+              <button className="danger" onClick={() => confirm(`Delete ${s.name} and all their data?`) && run(() => manageStudent('deleteStudent', { uid: s.id }))}>Delete</button>
             </td>
           </tr>))}
         </tbody>

@@ -75,11 +75,51 @@ const server = http.createServer(async (request, response) => {
     }
     const decodedToken = await auth.verifyIdToken(token, true);
     if (decodedToken.admin !== true) {
-      respond(response, 403, { code: 'permission-denied-api', message: 'Only admins can add students.' }, origin);
+      respond(response, 403, { code: 'permission-denied-api', message: 'Only admins can manage student records.' }, origin);
       return;
     }
 
     const body = await readBody(request);
+    const { action, uid, newPassword } = body || {};
+    if (action === 'resetStudentPassword') {
+      if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128 ||
+        typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 4096) {
+        respond(response, 400, { code: 'invalid-argument', message: 'Enter a student ID and a password of at least 6 characters.' }, origin);
+        return;
+      }
+      try {
+        await auth.updateUser(uid, { password: newPassword });
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          respond(response, 404, { code: 'not-found', message: 'The student account no longer exists.' }, origin);
+          return;
+        }
+        throw error;
+      }
+      respond(response, 200, { ok: true }, origin);
+      return;
+    }
+
+    if (action === 'deleteStudent') {
+      if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128) {
+        respond(response, 400, { code: 'invalid-argument', message: 'A valid student ID is required.' }, origin);
+        return;
+      }
+      try {
+        await auth.deleteUser(uid);
+      } catch (error) {
+        if (error.code !== 'auth/user-not-found') throw error;
+      }
+      await db.recursiveDelete(db.doc(`students/${uid}`));
+      respond(response, 200, { ok: true }, origin);
+      return;
+    }
+
+    if (action) {
+      respond(response, 400, { code: 'invalid-argument', message: 'Unsupported student action.' }, origin);
+      return;
+    }
+
     const { username, password, name, rollNo = '', department = '', year = '' } = body || {};
     if (
       typeof username !== 'string' ||
@@ -135,8 +175,8 @@ const server = http.createServer(async (request, response) => {
       respond(response, error.status, { code: error.code, message: error.message }, origin);
       return;
     }
-    console.error('Failed to add student:', error);
-    respond(response, 500, { code: 'internal', message: 'Could not add the student. Check the local admin service log.' }, origin);
+    console.error('Failed to process student request:', error);
+    respond(response, 500, { code: 'internal', message: 'Could not process the student request. Check the local admin service log.' }, origin);
   }
 });
 
