@@ -75,7 +75,7 @@ const server = http.createServer(async (request, response) => {
     }
     const decodedToken = await auth.verifyIdToken(token, true);
     if (decodedToken.admin !== true) {
-      respond(response, 403, { code: 'permission-denied-api', message: 'Only admins can manage student records.' }, origin);
+      respond(response, 403, { code: 'permission-denied-api', message: 'Only admins can manage staff records.' }, origin);
       return;
     }
 
@@ -84,14 +84,14 @@ const server = http.createServer(async (request, response) => {
     if (action === 'resetStudentPassword') {
       if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128 ||
         typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 4096) {
-        respond(response, 400, { code: 'invalid-argument', message: 'Enter a student ID and a password of at least 6 characters.' }, origin);
+        respond(response, 400, { code: 'invalid-argument', message: 'Enter a staff ID and a password of at least 6 characters.' }, origin);
         return;
       }
       try {
         await auth.updateUser(uid, { password: newPassword });
       } catch (error) {
         if (error.code === 'auth/user-not-found') {
-          respond(response, 404, { code: 'not-found', message: 'The student account no longer exists.' }, origin);
+          respond(response, 404, { code: 'not-found', message: 'The staff account no longer exists.' }, origin);
           return;
         }
         throw error;
@@ -102,7 +102,7 @@ const server = http.createServer(async (request, response) => {
 
     if (action === 'deleteStudent') {
       if (typeof uid !== 'string' || !uid.trim() || uid !== uid.trim() || uid.length > 128) {
-        respond(response, 400, { code: 'invalid-argument', message: 'A valid student ID is required.' }, origin);
+        respond(response, 400, { code: 'invalid-argument', message: 'A valid staff ID is required.' }, origin);
         return;
       }
       try {
@@ -116,7 +116,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (action) {
-      respond(response, 400, { code: 'invalid-argument', message: 'Unsupported student action.' }, origin);
+      respond(response, 400, { code: 'invalid-argument', message: 'Unsupported staff account action.' }, origin);
       return;
     }
 
@@ -130,7 +130,7 @@ const server = http.createServer(async (request, response) => {
       !name.trim() ||
       ![rollNo, department, year].every((value) => typeof value === 'string')
     ) {
-      respond(response, 400, { code: 'invalid-argument', message: 'Enter a valid student username, password, and name.' }, origin);
+      respond(response, 400, { code: 'invalid-argument', message: 'Enter a valid staff username, password, and name.' }, origin);
       return;
     }
 
@@ -141,7 +141,7 @@ const server = http.createServer(async (request, response) => {
       student = await auth.createUser({ email, password, displayName: name.trim() });
     } catch (error) {
       if (error.code === 'auth/email-already-exists') {
-        respond(response, 409, { code: 'already-exists', message: 'That student username is already in use.' }, origin);
+        respond(response, 409, { code: 'already-exists', message: 'That staff username is already in use.' }, origin);
         return;
       }
       throw error;
@@ -175,8 +175,8 @@ const server = http.createServer(async (request, response) => {
       respond(response, error.status, { code: error.code, message: error.message }, origin);
       return;
     }
-    console.error('Failed to process student request:', error);
-    respond(response, 500, { code: 'internal', message: 'Could not process the student request. Check the local admin service log.' }, origin);
+    console.error('Failed to process staff request:', error);
+    respond(response, 500, { code: 'internal', message: 'Could not process the staff request. Check the local admin service log.' }, origin);
   }
 });
 

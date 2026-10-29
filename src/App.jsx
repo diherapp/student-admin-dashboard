@@ -27,16 +27,16 @@ function Icon({ name, size = 20 }) {
 }
 const errText = (e) => {
   const messages = {
-    'server-config/missing': 'Student creation is not configured on Vercel. Add FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT under Project Settings → Environment Variables, then redeploy.',
-    'permission-denied': 'Firestore denied access to student records. Check that the Firestore rules are deployed and that you are signed in with the admin account.',
+    'server-config/missing': 'Staff account creation is not configured on Vercel. Add FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT under Project Settings → Environment Variables, then redeploy.',
+    'permission-denied': 'Firestore denied access to staff records. Check that the Firestore rules are deployed and that you are signed in with the admin account.',
     'unauthenticated': 'Your sign-in has expired. Sign in again and retry.',
     'local-service/unavailable': 'The local Spark admin service is not running. Start it in a second terminal and try again.',
-    'already-exists': 'That student username is already in use.',
-    'permission-denied-api': 'Only an admin account can manage student records.',
-    'not-found': 'The student account no longer exists.',
-    'functions/already-exists': 'That student username is already in use.',
-    'functions/failed-precondition': 'Firebase is missing the project configuration required to create student accounts.',
-    'functions/internal': 'The server could not add this student. Check Firebase Functions logs for createStudent to see the underlying error.',
+    'already-exists': 'That staff username is already in use.',
+    'permission-denied-api': 'Only an admin account can manage staff records.',
+    'not-found': 'The staff account no longer exists.',
+    'functions/already-exists': 'That staff username is already in use.',
+    'functions/failed-precondition': 'Firebase is missing the project configuration required to create staff accounts.',
+    'functions/internal': 'The server could not add this staff member. Check Firebase Functions logs for createStudent to see the underlying error.',
     'functions/not-found': 'The createStudent Firebase Function is not deployed. Deploy the latest Firebase Functions and try again.',
     'functions/permission-denied': 'Your account does not have admin permission. Sign out and sign back in, then try again.',
     'functions/unavailable': 'Firebase Functions is temporarily unavailable. Try again in a moment.',
@@ -134,11 +134,11 @@ function Dashboard() {
     <div className="dashboard-page">
       {studentsError && <p className="err">{studentsError}</p>}
       <div className="page-heading">
-        <div><h2>Administrative Overview</h2><p>Student attendance, tasks, and academic records</p></div>
+        <div><h2>Administrative Overview</h2><p>Staff attendance, tasks, and personnel records</p></div>
         <button className="primary-action" onClick={() => navigate('/attendance')}><Icon name="attendance" size={17} /> Today&apos;s Attendance</button>
       </div>
       <div className="overview-grid">
-        <Stat n={students.length} l="Total Students" detail="Registered students" icon="students" tone="blue" link="/students" action="View student directory" />
+        <Stat n={students.length} l="Total Staff" detail="Registered staff" icon="students" tone="blue" link="/students" action="View staff directory" />
         <Stat n={tasks} l="Active Tasks" detail="Assigned learning tasks" icon="clock" tone="green" link="/tasks" action="Manage tasks" />
         <Stat n={att.present} l="Today&apos;s Attendance" detail={`Visits recorded today: ${marked}`} icon="attendance" tone="cyan" link="/attendance" action="Review attendance" />
         <Stat n={Math.max(students.length - marked, 0)} l="Not Marked Today" detail={`${att.absent} absent · ${att.late} late`} icon="achievements" tone="amber" link="/attendance" action="Review daily records" />
@@ -146,15 +146,15 @@ function Dashboard() {
       <div className="dashboard-panels">
         <section className="panel">
           <header><span><Icon name="tasks" /> Task Management</span><NavLink to="/tasks">View all</NavLink></header>
-          <div className="panel-body"><span className="eyebrow">TOTAL ASSIGNED TASKS</span><strong>{tasks}</strong><p>Track assignments and student progress</p><button className="outline-action" onClick={() => navigate('/tasks')}>Manage tasks <Icon name="arrow" size={16} /></button></div>
+          <div className="panel-body"><span className="eyebrow">TOTAL ASSIGNED TASKS</span><strong>{tasks}</strong><p>Track assignments and staff progress</p><button className="outline-action" onClick={() => navigate('/tasks')}>Manage tasks <Icon name="arrow" size={16} /></button></div>
         </section>
         <section className="panel">
           <header><span><Icon name="attendance" /> Attendance</span><NavLink to="/attendance">View all</NavLink></header>
-          <div className="panel-body"><span className="eyebrow">STUDENTS MARKED TODAY</span><strong>{marked}<small> / {students.length}</small></strong><p>{att.present} present · {att.absent} absent · {att.late} late</p><button className="outline-action" onClick={() => navigate('/attendance')}>Review attendance <Icon name="arrow" size={16} /></button></div>
+          <div className="panel-body"><span className="eyebrow">STAFF MARKED TODAY</span><strong>{marked}<small> / {students.length}</small></strong><p>{att.present} present · {att.absent} absent · {att.late} late</p><button className="outline-action" onClick={() => navigate('/attendance')}>Review attendance <Icon name="arrow" size={16} /></button></div>
         </section>
         <section className="panel">
-          <header><span><Icon name="achievements" /> Student Records</span><NavLink to="/achievements">View all</NavLink></header>
-          <div className="panel-body"><span className="eyebrow">STUDENT ACHIEVEMENTS</span><strong><Icon name="students" size={25} /></strong><p>Review accomplishments and student profiles</p><button className="outline-action" onClick={() => navigate('/achievements')}>View achievements <Icon name="arrow" size={16} /></button></div>
+          <header><span><Icon name="achievements" /> Staff Records</span><NavLink to="/achievements">View all</NavLink></header>
+          <div className="panel-body"><span className="eyebrow">STAFF ACHIEVEMENTS</span><strong><Icon name="students" size={25} /></strong><p>Review accomplishments and staff profiles</p><button className="outline-action" onClick={() => navigate('/achievements')}>View achievements <Icon name="arrow" size={16} /></button></div>
         </section>
       </div>
     </div>
@@ -181,7 +181,7 @@ function Students() {
         if (active) setCreationConfig(result.configured ? 'ready' : 'missing');
       })
       .catch((error) => {
-        console.error('Could not check student-creation configuration:', error);
+        console.error('Could not check staff-management configuration:', error);
         if (active) setCreationConfig('unavailable');
       });
 
@@ -206,34 +206,34 @@ function Students() {
   const list = students.filter((s) => `${s.name} ${s.rollNo} ${s.email}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <>
-      <h2>Students</h2>
+      <h2>Staff</h2>
       {studentsError && <p className="err">{studentsError}</p>}
       {(creationConfig === 'local' || creationConfig === 'missing' || creationConfig === 'unavailable') && (
         <p className="note">
-          {creationConfig === 'local' && 'On Spark, keep the local admin service running in a second terminal to add or manage student accounts. '}
-          {creationConfig === 'missing' && 'To add or manage student accounts on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy. '}
-          {creationConfig === 'unavailable' && 'Could not check whether student account management is configured. If an action fails, check the Vercel Function logs. '}
+          {creationConfig === 'local' && 'On Spark, keep the local admin service running in a second terminal to add or manage staff accounts. '}
+          {creationConfig === 'missing' && 'To add or manage staff accounts on this deployment, configure FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT in Vercel Project Settings → Environment Variables, then redeploy. '}
+          {creationConfig === 'unavailable' && 'Could not check whether staff account management is configured. If an action fails, check the Vercel Function logs. '}
         </p>
       )}
       <form className="card row" onSubmit={add}>
-        <input name="username" placeholder="Student username (login)" autoComplete="username" required />
+        <input name="username" placeholder="Staff username (login)" autoComplete="username" required />
         <input name="password" type="password" placeholder="Password (min 6)" minLength={6} required />
         <input name="name" placeholder="Full name" required />
-        <input name="rollNo" placeholder="Roll no" />
+        <input name="rollNo" placeholder="Staff ID" />
         <input name="department" placeholder="Department" />
         <input name="year" placeholder="Year" />
-        <button>Add student</button>
+        <button>Add staff</button>
       </form>
       {msg && <p className={msgError ? 'err' : 'note'}>{msg}</p>}
-      <input className="search" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="search" placeholder="Search staff…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="scroll"><table>
-        <thead><tr><th>Roll</th><th>Name</th><th>Dept</th><th>Year</th><th>Login username</th><th></th></tr></thead>
+        <thead><tr><th>Staff ID</th><th>Name</th><th>Dept</th><th>Year</th><th>Login username</th><th></th></tr></thead>
         <tbody>{list.map((s) => (
           <tr key={s.id}>
             <td>{s.rollNo}</td><td>{s.name}</td><td>{s.department}</td><td>{s.year}</td><td>{s.username || s.email?.split('@')[0]}</td>
             <td className="acts">
               <button onClick={() => { const password = prompt('New password (min 6):'); if (password) run(() => manageStudent('resetStudentPassword', { uid: s.id, newPassword: password })); }}>Reset pw</button>
-              <button className="danger" onClick={() => confirm(`Delete ${s.name} and all their data?`) && run(() => manageStudent('deleteStudent', { uid: s.id }))}>Delete</button>
+              <button className="danger" onClick={() => confirm(`Delete staff member ${s.name} and all their data?`) && run(() => manageStudent('deleteStudent', { uid: s.id }))}>Delete</button>
             </td>
           </tr>))}
         </tbody>
@@ -279,7 +279,7 @@ function Attendance() {
         {msg && <span className="note">{msg}</span>}
       </div>
       <div className="scroll"><table>
-        <thead><tr><th>Roll</th><th>Name</th><th>Status</th></tr></thead>
+        <thead><tr><th>Staff ID</th><th>Name</th><th>Status</th></tr></thead>
         <tbody>{students.map((s) => (
           <tr key={s.id}><td>{s.rollNo}</td><td>{s.name}</td>
             <td className="acts">{['present', 'absent', 'late'].map((st) => (
@@ -312,7 +312,7 @@ function Tasks() {
   const add = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
-    if (!sel.length) return setMsg('Pick at least one student.');
+    if (!sel.length) return setMsg('Pick at least one staff member.');
     try {
       await addDoc(collection(db, 'tasks'), {
         title: f.title, description: f.description, priority: f.priority,
@@ -373,7 +373,7 @@ function Achievements() {
       <h2>Achievements</h2>
       {studentsError && <p className="err">{studentsError}</p>}
       <select value={uid} onChange={(e) => setUid(e.target.value)}>
-        <option value="">Select a student…</option>
+        <option value="">Select a staff member…</option>
         {students.map((s) => <option key={s.id} value={s.id}>{s.rollNo} · {s.name}</option>)}
       </select>
       {uid && !list.length && <p className="note">No achievements yet.</p>}
@@ -405,7 +405,7 @@ function StudentPortal({ user }) {
         setProfileError('');
       } else {
         setStudent(null);
-        setProfileError('No student profile is linked to this account. Ask your administrator to check the student record.');
+        setProfileError('No staff profile is linked to this account. Ask your administrator to check the staff record.');
       }
     },
     (error) => setProfileError(errText(error)),
@@ -449,7 +449,7 @@ function StudentPortal({ user }) {
 
   if (profileError) {
     return <div className="center"><div className="card login">
-      <h1>Student account</h1><p className="err">{profileError}</p>
+      <h1>Staff account</h1><p className="err">{profileError}</p>
       <button onClick={() => signOut(auth)}>Sign out</button>
     </div></div>;
   }
@@ -457,13 +457,13 @@ function StudentPortal({ user }) {
   return (
     <div className="user-shell">
       <nav className="user-topbar">
-        <h1>StudentPortal</h1>
+        <h1>HRMS Staff Portal</h1>
         <span>{student?.name || 'Loading profile…'}</span>
         <button onClick={() => signOut(auth)}><Icon name="logout" size={16} /> Sign out</button>
       </nav>
       <main>
-        <h2>Welcome, {student?.name || 'student'}</h2>
-        {student && <p className="note">Username: {student.username || student.email?.split('@')[0]} · Roll no: {student.rollNo || '—'} · {student.department || '—'} · Year {student.year || '—'}</p>}
+        <h2>Welcome, {student?.name || 'staff member'}</h2>
+        {student && <p className="note">Username: {student.username || student.email?.split('@')[0]} · Staff ID: {student.rollNo || '—'} · {student.department || '—'} · Year {student.year || '—'}</p>}
         {message && <p className="err">{message}</p>}
         <h3>My tasks</h3>
         {!tasks.length && <p className="note">No tasks assigned yet.</p>}
@@ -495,10 +495,10 @@ function FirebaseSetup() {
   return (
     <div className="center">
       <section className="card setup">
-        <h1>StudentPortal setup required</h1>
+        <h1>HRMS Admin Dashboard setup required</h1>
         <p>
           This deployment is missing its Firebase web configuration. Add the variables below
-          in your Vercel project to enable sign-in and load student data.
+          in your Vercel project to enable sign-in and load staff data.
         </p>
         <h2>Missing environment variables</h2>
         <ul>{missingFirebaseConfig.map((name) => <li key={name}><code>{name}</code></li>)}</ul>
@@ -534,7 +534,7 @@ function ConfiguredApp() {
   if (!admin) return <StudentPortal user={user} />;
   const adminLinks = [
     ['/', 'Dashboard', 'dashboard'],
-    ['/students', 'Students', 'students'],
+    ['/students', 'Staff', 'students'],
     ['/attendance', 'Attendance', 'attendance'],
     ['/tasks', 'Tasks', 'tasks'],
     ['/achievements', 'Achievements', 'achievements'],
