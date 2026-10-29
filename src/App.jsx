@@ -543,7 +543,7 @@ function ConfiguredApp() {
     <BrowserRouter>
       <div className="admin-shell">
         <aside className="sidebar">
-          <div className="brand"><span className="brand-mark"><Icon name="shield" size={20} /></span><strong>HRMS Admin Dashboard</strong></div>
+          <div className="brand"><span className="brand-mark"><Icon name="shield" size={20} /></span><strong>HRMS Admin</strong></div>
           <nav className="side-nav">
             {adminLinks.map(([to, label, icon]) => (
               <NavLink key={to} to={to} end={to === '/'}><Icon name={icon} size={19} /><span>{label}</span></NavLink>))}
